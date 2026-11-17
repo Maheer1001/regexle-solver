@@ -1,0 +1,179 @@
+{-
+Author: Maheer Mirza
+Student ID: mmm3g24
+Copyright: University of Southampton 2025
+Description: Lambda calculus evaluation with exceptions (Call-by-Value vs Call-by-Name)
+-}
+
+-- Expression data type for lambda calculus with exceptions
+data Exp = Var Int | Abs Int Exp | App Exp Exp | Exn | Catch Exp Exp
+    deriving (Eq,Show,Read)
+
+-- | Count reduction steps for both evaluation strategies
+-- Returns (CBV steps, CBN steps) bounded by the given limit
+countReductions :: Int -> Exp -> (Int, Int)
+countReductions bound expr = (cbvCount, cbnCount)
+    where
+        cbvCount = countCBV bound 0 expr
+        cbnCount = countCBN bound 0 expr
+
+-- Count Call-by-Value reduction steps
+countCBV :: Int -> Int -> Exp -> Int
+countCBV bound acc expr
+    | acc >= bound = bound
+    | isValue expr = acc
+    | otherwise = case reduceCBV expr of
+        Nothing -> acc
+        Just expr' -> countCBV bound (acc + 1) expr'
+
+-- Count Call-by-Name reduction steps
+countCBN :: Int -> Int -> Exp -> Int
+countCBN bound acc expr
+    | acc >= bound = bound
+    | isValue expr = acc
+    | otherwise = case reduceCBN expr of
+        Nothing -> acc
+        Just expr' -> countCBN bound (acc + 1) expr'
+
+-- Check if expression is a value (lambda abstraction or exception)
+isValue :: Exp -> Bool
+isValue (Abs _ _) = True
+isValue Exn = True
+isValue _ = False
+
+-- Call-by-Value reduction: evaluate arguments before substitution
+reduceCBV :: Exp -> Maybe Exp
+reduceCBV (Var _) = Nothing
+reduceCBV (Abs _ _) = Nothing  
+reduceCBV Exn = Nothing
+reduceCBV (App Exn _) = Just Exn
+reduceCBV (App _ Exn) = Just Exn
+reduceCBV (App (Abs n body) e2) 
+    | Just e2' <- reduceCBV e2 = Just (App (Abs n body) e2')
+    | otherwise = Just (substitute n e2 body)
+reduceCBV (App e1 e2)
+    | Just e1' <- reduceCBV e1 = Just (App e1' e2)
+    | Just e2' <- reduceCBV e2 = Just (App e1 e2')
+    | otherwise = Nothing
+reduceCBV (Catch e1 e2)
+    | Just e1' <- reduceCBV e1 = Just (Catch e1' e2)
+    | Just e2' <- reduceCBV e2 = Just (Catch e1 e2')
+    | e2 == Exn = Just e1
+    | isValue e2 = Just e2
+    | otherwise = Nothing
+
+-- Call-by-Name reduction: substitute before evaluating arguments
+reduceCBN :: Exp -> Maybe Exp
+reduceCBN (Var _) = Nothing
+reduceCBN (Abs _ _) = Nothing  
+reduceCBN Exn = Nothing
+reduceCBN (App Exn _) = Just Exn
+reduceCBN (App _ Exn) = Just Exn
+reduceCBN (App (Abs n body) e2) 
+    | e2 /= Exn = Just (substitute n e2 body)
+    | otherwise = Nothing
+reduceCBN (App e1 e2)
+    | Just e1' <- reduceCBN e1 = Just (App e1' e2)
+    | Just e2' <- reduceCBN e2 = Just (App e1 e2')
+    | otherwise = Nothing
+reduceCBN (Catch e1 e2)
+    | Just e1' <- reduceCBN e1 = Just (Catch e1' e2)
+    | Just e2' <- reduceCBN e2 = Just (Catch e1 e2')
+    | e2 == Exn = Just e1
+    | isValue e2 = Just e2
+    | otherwise = Nothing
+
+-- Substitute variable with replacement expression
+substitute :: Int -> Exp -> Exp -> Exp
+substitute var replacement = sub
+    where
+        sub (Var v) 
+            | v == var = replacement
+            | otherwise = Var v
+        sub (Abs v body) 
+            | v == var = Abs v body
+            | otherwise = Abs v (sub body)
+        sub (App e1 e2) = App (sub e1) (sub e2)
+        sub Exn = Exn
+        sub (Catch e1 e2) = Catch (sub e1) (sub e2)
+
+-- ============================================================================
+-- TEST SUITE 6
+-- ============================================================================
+
+main :: IO ()
+main = do
+    putStrLn "=== Challenge 6: Lambda Calculus with Exceptions ===\n"
+    
+    testCase "Identity function (value)" 10 
+        (Abs 0 (Var 0))
+        (0, 0)
+    
+    testCase "Apply identity to identity" 10
+        (App (Abs 1 (Var 1)) (Abs 1 (Var 1)))
+        (1, 1)
+    
+    testCase "Nested application" 10
+        (App (App (Abs 1 (Abs 2 (Var 1))) (Var 3)) (Var 4))
+        (2, 2)
+    
+    testCase "Exception alone" 10
+        Exn
+        (0, 0)
+    
+    testCase "Simple catch with exception" 10
+        (Catch (Abs 1 (Var 1)) Exn)
+        (1, 1)
+    
+    testCase "Simple catch with lambda" 10
+        (Catch (Abs 1 (Var 1)) (Abs 2 (Var 2)))
+        (1, 1)
+    
+    testCase "Exception propagation: exn e" 10
+        (App Exn (Abs 1 (Var 1)))
+        (1, 1)
+    
+    testCase "Exception propagation: e exn" 10
+        (App (Abs 1 (Var 1)) Exn)
+        (1, 1)
+    
+    testCase "Full example from spec" 4
+        (Catch (App (Abs 1 (Var 1)) (Abs 1 (Var 1))) 
+                (App (Abs 3 (Abs 2 (Var 2))) 
+                    (App (Abs 4 (App Exn (Abs 2 (Var 2)))) 
+                        (Abs 1 (Var 1)))))
+        (4, 3)
+    
+    testCase "CBV evaluates argument first" 10
+        (App (Abs 1 (Var 1)) (App (Abs 2 (Var 2)) (Var 3)))
+        (2, 2)
+    
+    testCase "Unused argument (CBN advantage)" 10
+        (App (Abs 1 (Abs 2 (Var 2))) (App (Abs 3 (Var 3)) (Var 4)))
+        (2, 1)
+    
+    testCase "Exception in unused position" 10
+        (App (Abs 1 (Abs 2 (Var 2))) (App Exn (Var 3)))
+        (2, 1)
+    
+    testCase "Bound limit test" 2
+        (App (App (Abs 1 (Abs 2 (Var 1))) (Var 3)) (Var 4))
+        (2, 2)
+    
+    testCase "Exception in handler" 10
+        (Catch (App Exn (Var 1)) (Abs 2 (Var 2)))
+        (2, 2)
+    
+    putStrLn "\n=== All Challenge 6 tests complete ===\n"
+
+testCase :: String -> Int -> Exp -> (Int, Int) -> IO ()
+testCase description bound expr expected = do
+    let result = countReductions bound expr
+    let status = if result == expected then "PASS" else "FAIL"
+    putStrLn $ "Test: " ++ description
+    putStrLn $ "Bound: " ++ show bound
+    putStrLn $ "Expression: " ++ show expr
+    putStrLn $ "Expected: " ++ show expected
+    putStrLn $ "Output:   " ++ show result
+    putStrLn $ "Status:   " ++ status
+    putStrLn ""
