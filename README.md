@@ -13,13 +13,14 @@ Haskell solutions to six challenges built around regular expressions and a hexag
 | `ex5.hs` | **Regexle solver.** Solve a hexagonal Regexle puzzle from its constraints |
 | `ex6.hs` | **Lambda calculus with exceptions.** Count reduction steps under call-by-value and call-by-name, up to a bound |
 
-`tests.hs` contains the test suite for every challenge, and `report.pdf` is the written report.
+`tests/` holds one test suite per challenge (60 tests in total), and `report.pdf` is the written report.
 
 ## Run
 
-Requires GHC (for example via [GHCup](https://www.haskell.org/ghcup/)).
+Requires GHC, for example via [GHCup](https://www.haskell.org/ghcup/).
 
 ```bash
-runghc tests.hs          # run the test suite
-ghci ex5.hs              # load a challenge interactively
+./run-tests.sh                   # run every challenge's tests
+runghc -i. tests/TestEx5.hs      # run one challenge's tests
+ghci ex5.hs                      # load a challenge interactively
 ```
