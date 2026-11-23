@@ -1,0 +1,25 @@
+# Sample size-5 hexagonal Regexle puzzle used by setup-check.sh.
+# One clue per line, in the regex syntax ex2.hs parses. Lines starting with
+# '#' are comments; the "expected:" line is the known solution, read top to
+# bottom, left to right (rows of 3, 4, 5, 4, 3 cells).
+#
+# expected: POUELUCKWOOLESOEKLY
+#
+# Clues 1-5: horizontal rows, top to bottom.
+(PO|BA)(U|T)
+EL(UC|GN)
+(K|YPTY|WOO|L)+
+(S?O|E)+
+(L?Y|B|K)+
+# Clues 6-10: the second orientation (grid rotated 120 degrees).
+(A|ZD|E?K)+
+(K|QX|EW|SL)+
+(P|L|M)+OOY
+(E|U?O|XX)+
+(YF|C?L|U)+
+# Clues 11-15: the third orientation (rotated a further 120 degrees).
+(U|Y|EL?)+
+(GCM|OC|Q|LO)+
+(ITNH|E|KS|OUU)+
+(EW|LO|P|RRH)+
+(E?P|C|K)+
