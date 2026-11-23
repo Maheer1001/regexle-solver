@@ -78,11 +78,36 @@ main = do
         ]
         [True,True,True,True,True,True,True,True,True,True,True,True,True,True,True]
     
+    -- Grid helpers the checker is built on
+    check "hexgridFormat splits a size 3 answer into 2-3-2 rows"
+        ["AB", "CDE", "FG"] (hexgridFormat "ABCDEFG" [2, 3, 2])
+    check "rotateHexgrid turns a size 3 grid by 120 degrees"
+        ["FC", "GDA", "EB"] (rotateHexgrid ["AB", "CDE", "FG"] [2, 3, 2])
+    check "Three rotations return the original grid"
+        ["AB", "CDE", "FG"]
+        (iterate (`rotateHexgrid` [2, 3, 2]) ["AB", "CDE", "FG"] !! 3)
+    check "constraintPairing reads rows in all three orientations"
+        ["HT", "DAW", "SZ", "DS", "HAZ", "TW", "ZW", "SAT", "DH"]
+        (map fst (constraintPairing "HTDAWSZ" (replicate 9 (Let [] (S Empty)))))
+    check "wildcardMatch: '.' matches any one character, lengths must agree"
+        [True, False, False] [wildcardMatch "AXB" "A.B", wildcardMatch "AXB" "A.C", wildcardMatch "AB" "A.B"]
+    check "matchesLRegExp respects the exact row length"
+        [True, False] [matchesLRegExp "AAA" (Let [] (Plus (Lit 'A'))), matchesLRegExp "AAB" (Let [] (Plus (Lit 'A')))]
+
     putStrLn "\n=== All Challenge 4 tests complete ===\n"
 
 testCase :: String -> String -> [LRegExp] -> [Bool] -> IO ()
 testCase description answer constraints expected = do
     let result = checkRegexle answer constraints
+    let status = if result == expected then "PASS" else "FAIL"
+    putStrLn $ "Test: " ++ description
+    putStrLn $ "Expected: " ++ show expected
+    putStrLn $ "Output:   " ++ show result
+    putStrLn $ "Status:   " ++ status
+    putStrLn ""
+
+check :: (Eq a, Show a) => String -> a -> a -> IO ()
+check description expected result = do
     let status = if result == expected then "PASS" else "FAIL"
     putStrLn $ "Test: " ++ description
     putStrLn $ "Expected: " ++ show expected

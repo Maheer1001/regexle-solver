@@ -26,6 +26,22 @@ main = do
     testCase "let x1 = A in let x2 = B in x1x2" 
         (Just (Let [(1, S (Lit 'A')), (2, S (Lit 'B'))] (S (SSeq [Var 1, Var 2]))))
 
+    -- Wildcards, optional characters and mixed operators
+    testCase "." (Just (Let [] (S Any)))
+    testCase "A.B" (Just (Let [] (S (SSeq [Lit 'A', Any, Lit 'B']))))
+    testCase "e" (Just (Let [] (S Empty)))
+    testCase "A?B" (Just (Let [] (S (SSeq [Opt 'A', Lit 'B']))))
+    testCase "A+B?" (Just (Let [] (Seq [Plus (Lit 'A'), S (Opt 'B')])))
+    testCase "(A|B)C" (Just (Let [] (S (SSeq [Choice [Lit 'A', Lit 'B'], Lit 'C']))))
+    testCase "(PO|BA)(U|T)" (Just (Let [] (S (SSeq [Choice [SSeq [Lit 'P', Lit 'O'], SSeq [Lit 'B', Lit 'A']], Choice [Lit 'U', Lit 'T']]))))
+    testCase "(P|L|M)+OOY" (Just (Let [] (Seq [Plus (Choice [Lit 'P', Lit 'L', Lit 'M']), S (SSeq [Lit 'O', Lit 'O', Lit 'Y'])])))
+
+    -- Invalid input is rejected with Nothing
+    testCase "a" Nothing
+    testCase "x" Nothing
+    testCase "let x1 = A" Nothing
+    testCase "let x1 = A in" Nothing
+
     putStrLn "\n=== All Challenge 2 tests complete ===\n"
 
 testCase :: String -> Maybe LRegExp -> IO ()
